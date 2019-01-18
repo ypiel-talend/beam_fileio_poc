@@ -65,13 +65,13 @@
                     <threadCount>4</threadCount>
                     <redirectTestOutputToFile>true</redirectTestOutputToFile>
                 </configuration>
-                <dependencies>
+                <!--dependencies>
                     <dependency>
                         <groupId>org.apache.maven.surefire</groupId>
                         <artifactId>surefire-junit47</artifactId>
                         <version>${maven-surefire-plugin.version}</version>
                     </dependency>
-                </dependencies>
+                </dependencies-->
             </plugin>
 
             <!-- Ensure that the Maven jar plugin runs before the Maven

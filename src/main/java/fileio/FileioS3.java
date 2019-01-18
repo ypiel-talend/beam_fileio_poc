@@ -41,10 +41,13 @@ import org.apache.beam.sdk.values.TypeDescriptors;
 public class FileioS3 {
 
     public static void main(String[] args) {
-        PipelineOptions options =
+        /*PipelineOptions options =
                 PipelineOptionsFactory.fromArgs(args).withValidation().as(PipelineOptions.class);
 
-        runCopyFile(options);
+        runCopyFile(options);*/
+
+        runCountLocal();
+        //runCountS3();
     }
 
     private static Properties loadConfig(){
@@ -79,11 +82,12 @@ public class FileioS3 {
         }
     }
 
-    private static void runCopyFile
+    private static void runCountLocal(){
+        PipelineOptions noOption = PipelineOptionsFactory.create();
+        runCount(noOption, "C:\\Devx\\Tmp\\people.csv");
+    }
 
-    private static void runCopyFile(PipelineOptions options) {
-        displayLoadedModules();
-
+    private static void runCountS3(){
         // Configure AWS credentials
         Properties prop = loadConfig();
         BasicAWSCredentials baseCred = new BasicAWSCredentials(prop.getProperty("access_key"), prop.getProperty("secret_key"));
@@ -95,12 +99,17 @@ public class FileioS3 {
         s3o.setS3UploadBufferSizeBytes(5_242_880);
         s3o.setAwsCredentialsProvider(cred);
 
-        displayRegistredFilesystems(s3o);
+        runCount(s3o, "s3://ypiel/csv/people.csv");
+    }
+
+    private static void runCount(PipelineOptions options, String pattern) {
+        /*displayLoadedModules();
+        displayRegistredFilesystems(options);*/
 
         // Create the pipeline
-        Pipeline p = Pipeline.create(s3o);
+        Pipeline p = Pipeline.create(options);
         p.apply("Configure", FileIO.match()
-                .filepattern("s3://ypiel/csv/people.csv"))
+                .filepattern(pattern))
                 .apply("Select files", FileIO.readMatches())
                 .apply("Read Files Content",
                         MapElements.into(TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptors.strings()))
