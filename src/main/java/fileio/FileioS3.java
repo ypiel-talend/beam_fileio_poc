@@ -69,12 +69,17 @@ public class FileioS3 {
 
     private static void displayRegistredFilesystems(PipelineOptions opts){
         // Check available file system
+
+        // The explicit registration is not needed it done by the pipeline
+        // in this case it is just to get the list af available filesystem
         S3FileSystemRegistrar fsr = new S3FileSystemRegistrar();
         Iterable<FileSystem> fileSystems = fsr.fromOptions(opts);
         for(FileSystem fs : fileSystems){
             System.out.println("Registered filesystem in pipeline  options :" + fs.toString());
         }
     }
+
+    private static void runCopyFile
 
     private static void runCopyFile(PipelineOptions options) {
         displayLoadedModules();
@@ -95,7 +100,7 @@ public class FileioS3 {
         // Create the pipeline
         Pipeline p = Pipeline.create(s3o);
         p.apply("Configure", FileIO.match()
-                .filepattern("s3://ypiel/toto.zip"))
+                .filepattern("s3://ypiel/csv/people.csv"))
                 .apply("Select files", FileIO.readMatches())
                 .apply("Read Files Content",
                         MapElements.into(TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptors.strings()))
