@@ -1,4 +1,4 @@
-package fileio;// ============================================================================
+package Bench;// ============================================================================
 //
 // Copyright (C) 2006-2019 Talend Inc. - www.talend.com
 //
@@ -11,16 +11,11 @@ package fileio;// ==============================================================
 //
 // ============================================================================
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.List;
-import java.util.Properties;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.beam.runners.direct.DirectOptions;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.FileIO;
 import org.apache.beam.sdk.io.FileSystem;
@@ -38,16 +33,44 @@ import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.TypeDescriptors;
 
-public class FileioS3 {
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
+
+public class ReadText {
 
     public static void main(String[] args) {
+        int nbExec = 25;
+        int skipFirst = 5;
+
+        List<Long> durations = new ArrayList<>();
+        for(int i = 0; i < nbExec; i++) {
+            long start = System.currentTimeMillis();
         /*PipelineOptions options =
                 PipelineOptionsFactory.fromArgs(args).withValidation().as(PipelineOptions.class);
 
         runCopyFile(options);*/
 
-        runCountLocal();
-        //runCountS3();
+            //runCountLocal();
+            runCountS3();
+
+            long end = System.currentTimeMillis();
+            if(i >= skipFirst) {
+                durations.add((end - start));
+            }
+        }
+        System.out.println("* Execution duration :");
+        long sum = 0;
+        for(Long d : durations) {
+            System.err.println(d);
+            sum += d;
+        }
+        System.out.println("* Average : " + (sum / durations.size()));
+        System.out.println("End.");
     }
 
     private static Properties loadConfig(){
@@ -83,8 +106,15 @@ public class FileioS3 {
     }
 
     private static void runCountLocal(){
-        PipelineOptions noOption = PipelineOptionsFactory.create();
-        runCount(noOption, "C:\\Devx\\Tmp\\people.csv");
+        //PipelineOptions noOption = PipelineOptionsFactory.create();
+
+        // Due to beam bug need to give aws region
+        // since I have  'beam-sdks-java-io-amazon-web-services' in dependencies
+        S3Options s3o = PipelineOptionsFactory.as(S3Options.class);
+        s3o.setAwsRegion("eu-west-1");
+
+        runCount(s3o, //noOption,
+                "C:\\Devx\\Tmp\\Resources\\persons.csv");
     }
 
     private static void runCountS3(){
@@ -99,12 +129,18 @@ public class FileioS3 {
         s3o.setS3UploadBufferSizeBytes(5_242_880);
         s3o.setAwsCredentialsProvider(cred);
 
-        runCount(s3o, "s3://ypiel/csv/people.csv");
+        runCount(s3o, "s3://ypiel/beam/persons.csv");
     }
 
     private static void runCount(PipelineOptions options, String pattern) {
+        Integer zero = new Integer(0);
         /*displayLoadedModules();
         displayRegistredFilesystems(options);*/
+
+        DirectOptions directOptions = options.as(DirectOptions.class);
+        directOptions.setEnforceEncodability(false);
+        directOptions.setEnforceImmutability(false);
+        directOptions.setTargetParallelism(Runtime.getRuntime().availableProcessors());
 
         // Create the pipeline
         Pipeline p = Pipeline.create(options);
@@ -123,30 +159,26 @@ public class FileioS3 {
                                     }
                                     return KV.of("", null); // /dev/null
                                 }))
-                .apply("Calculate size",
-                        new PTransform<PCollection<KV<String, String>>, PCollection<KV<String, Integer>>>() {
+                .apply("Do nothing",
+                        new PTransform<PCollection<KV<String, String>>, PCollection<Integer>>() {
 
                             @Override
-                            public PCollection<KV<String, Integer>> expand(PCollection<KV<String, String>> input) {
+                            public PCollection<Integer> expand(PCollection<KV<String, String>> input) {
                                 return (PCollection) input.apply(
-                                        ParDo.of(new DoFn<KV<String, String>, KV<String, Integer>>() {
+                                        ParDo.of(new DoFn<KV<String, String>, Integer>() {
 
                                             @ProcessElement
                                             public void processElement(
                                                     @Element
                                                             KV<String, String> elts,
-                                                    OutputReceiver<KV<String, Integer>> out) throws Exception {
-                                                String fileName = elts.getKey();
-                                                Integer fileSize = elts.getValue().length();
+                                                    OutputReceiver<Integer> out) throws Exception {
 
-                                                out.output(KV.of(fileName, fileSize));
+                                                // do nothing
+                                                out.output(zero);
                                             }
                                         }));
                             }
-                        })
-                .apply("CSV format", MapElements.into(TypeDescriptors.strings())
-                        .via((KV<String, Integer> info) -> info.getKey() + "," + info.getValue()))
-                .apply(FileIO.<String>write().via(TextIO.sink()).to("c:\\beamout"));
+                        });
 
         // Execute the pipeline
         p.run().waitUntilFinish();
