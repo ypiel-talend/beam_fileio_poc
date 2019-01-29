@@ -11,6 +11,8 @@ Some benchmark :
 - Bench.WriteCMLToAvro : read XML and store it as csv in another place
 
 To execute POCs create an aws.conf file in the same directory of this README.md and set those properties:
+```
 access_key=xxxxxxxx
 secret_key=xxxxxxxx
 region=xxxxxxxxxxx
+```
