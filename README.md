@@ -16,3 +16,7 @@ access_key=xxxxxxxx
 secret_key=xxxxxxxx
 region=xxxxxxxxxxx
 ```
+To run :
+```
+mvn compile exec:java -Dexec.mainClass=fileio.FileIOXML -Pdirect-runner
+```
